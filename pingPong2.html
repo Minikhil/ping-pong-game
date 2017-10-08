@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+  <!-- <h1> Ping Pong </h1> -->
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+      <!-- link my java script file -->
+      <!-- <script src="script.js"></script> -->
+    <script>
+      var canvas;// creating global variables
+      var canvasContext;
+      //x and y pos of ball
+      var ballX = 50;
+      var ballY = 50;
+      //ball moves 10px horizonatl and 4px down per frame
+      var ballSpeedX = 10;
+      var ballSpeedY = 4; //pos Y goes down
+      var paddle1Y = 250;//left paddle
+      var paddle2Y = 250;
+      const PADDLE_HEIGHT = 100;
+      const PADDLE_THICKNESS = 10;
+      var player1Score = 0;
+      var player2Score = 0;
+      const WINNING_SCORE = 11;
+      var showingWinScreen = false;
+      // function fires every time mouse moves
+      function calculateMousePos(evt){
+        var rect = canvas.getBoundingClientRect(); // getting dimensions of canvas
+        var root = document.documentElement; // getting handel on html page
+        var mouseX = evt.clientX - rect.left - root.scrollLeft; // getting pos relative to canvas and not the whole html page
+        var mouseY = evt.clientY - rect.top - root.scrollTop;
+        return{
+          x: mouseX,
+          y: mouseY
+        }
+      }
+      function handleMouseClick(evt){
+        if(showingWinScreen){
+          player1Score = 0;
+          player2Score = 0;
+          showingWinScreen = false;
+        }
+      }
+
+      window.onload = function display() {   // function runs when window loads
+        console.log("Hello World");// print statement
+        canvas = document.getElementById('gameCanvas'); // get handel on canvas tag
+        canvasContext = canvas.getContext('2d'); // returns a drawing context on the canvas
+        var framesPerSec = 30; // # of still images per sec
+        setInterval(function() {
+          moveEveryThing();
+          drawEveryThing();
+
+        }, 1000/framesPerSec);  // function which calls drawEveryThing and moveEveryThing inside a timer function
+        // Listens for mouse to move then calls the calculateMousePos function
+        canvas.addEventListener('mousemove',
+            function(evt){
+              var mousePos = calculateMousePos(evt);
+              paddle1Y = mousePos.y -(PADDLE_HEIGHT/2) ; // centers the paddle with mouse movement
+            });
+        canvas.addEventListener('mousedown', handleMouseClick);
+      }
+      function ballRest(){
+        if(player1Score >= WINNING_SCORE|| player2Score >= WINNING_SCORE){
+          showingWinScreen = true;
+        }
+        ballSpeedX = -ballSpeedX;
+        ballX = canvas.width/2;
+        ballY = canvas.height/2
+
+      }
+
+      //AI to moves the left paddle
+      function computerMovement(){
+        var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT/2);
+        if(paddle2YCenter < ballY - 35 ){
+            paddle2Y += 6;
+        }
+        else if(paddle2YCenter > ballY + 35){
+          paddle2Y -= 6;
+        }
+      }
+      function moveEveryThing() {
+        if(showingWinScreen){ // Freeze movement on win screen till handleMouseClick function fires on event mouse click
+          return;
+        }
+        computerMovement();
+        ballX = ballX + ballSpeedX;
+        ballY = ballY + ballSpeedY;
+        //right wall
+          if(ballX >=canvas.width){
+            if(ballY> paddle2Y && ballY < paddle2Y+PADDLE_HEIGHT){
+                ballSpeedX = -ballSpeedX; //ball changes direction
+                var deltaY = ballY - (paddle2Y+PADDLE_HEIGHT/2); // +/- VALUE of how far ball is from center of paddle when in contact with paddle
+                ballSpeedY = deltaY *0.35;// setting vertical speed of ball for more ball control rather than just reflecting
+            }
+            else {
+              player1Score++; // must be b4 ballRest()
+              ballRest(); // ball reset when past right wall
+
+            }
+
+          }
+          //left wall
+          if(ballX<0){
+            if(ballY> paddle1Y && ballY < paddle1Y+PADDLE_HEIGHT){
+                ballSpeedX = -ballSpeedX; //ball changes direction
+                var deltaY = ballY - (paddle1Y+PADDLE_HEIGHT/2); // +/- VALUE of how far ball is from center of paddle when in contact with paddle
+                ballSpeedY = deltaY *0.35;
+
+            }
+            else {
+              player2Score++;
+              ballRest(); // ball reset when past left wall
+
+            }
+
+          }
+          if(ballY >=canvas.height){
+            ballSpeedY= -ballSpeedY;
+          }
+          if(ballY<0){
+            ballSpeedY = -ballSpeedY;
+          }
+      }
+      function drawNet(){
+        for(var i = 0; i<canvas.height; i+=40){
+            colorRect(canvas.width/(2),i,2,20,'white');
+        }
+      }
+      function drawEveryThing(){
+        //console.log("called drawEveryThing");
+        //canvasContext.fillStyle= 'black';seting the color to balck
+        //canvasContext.fillRect(0,0, canvas.width, canvas.height);  Applying color black. Starting pos: 0px form left 0px from top, Dimensions: 800px wide 600px height
+
+        colorRect(0,0, canvas.width, canvas.height, 'black'); // blacks out screen
+        if(showingWinScreen){
+            canvasContext.font='30px Arial';
+            canvasContext.fillStyle = "white";
+            if(player1Score >= WINNING_SCORE){
+              canvasContext.fillText("Congratulations You Won!",350,200);
+            }
+            else if(player2Score >= WINNING_SCORE){
+
+              canvasContext.fillText("You Lost :(", 270,200);
+
+            }
+            canvasContext.fillText("Click To Try Again ", 250, 500);
+            return; // exits method
+        }
+        drawNet(); // draw b4 ball so ball can overlay the net
+        colorRect(0,paddle1Y, PADDLE_THICKNESS, PADDLE_HEIGHT, 'white'); //left paddle
+        colorRect(canvas.width -PADDLE_THICKNESS,paddle2Y, PADDLE_THICKNESS, PADDLE_HEIGHT, 'white'); //right paddle
+        colorCircle(ballX,ballY,PADDLE_THICKNESS,'white'); //creating circle using function
+        canvasContext.font='30px Arial';
+        canvasContext.fillText(player1Score, 100, 95);
+        canvasContext.fillText(player2Score, canvas.width-100, 100);
+      }
+      // Instead of writing 2 seprate lines to set color and then apply the color use this function
+      function colorRect(leftx,topY, width, height, drawColor){
+        canvasContext.fillStyle = drawColor;
+        canvasContext.fillRect(leftx,topY,width,height);
+      }
+      function colorCircle(centerX,centerY,raduis,drawColor){
+          canvasContext.fillStyle = drawColor;
+          canvasContext.beginPath();
+          // center of circle: xpos, ypos. Raduis, (deg, rad)circumference, pick which side of circlr to show
+          canvasContext.arc(centerX,centerY,raduis,0,Math.PI*2,true);
+          canvasContext.fill();
+      }
+    </script>
+</html>
+
+<!-- Notes
+  Shape overlap: which ever shape was made after will overlap the shape created before it
+  Top left corner is (0,0)
+  To create motion callmethod which draws in framesPerSec and increment the postion of obj in method
+  change direction by making speed negative
+
+-->
